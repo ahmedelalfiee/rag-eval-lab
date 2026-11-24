@@ -102,8 +102,8 @@ def test_abstention_is_detected():
 
 
 def test_judge_parses_json_and_survives_garbage():
-    ok = judge(FakeJudge({"correct": True, "faithful": False, "reason": "r"}), "q", "ref", "ans", "ctx")
-    assert ok.correct and not ok.faithful
+    ok = judge(FakeJudge({"correct": True, "faithful": False, "unsupported": "x", "reason": "r"}), "q", "ref", "ans", "ctx")
+    assert ok.correct and not ok.faithful and "unsupported: x" in ok.reason
     bad = judge(FakeJudge("not json"), "q", "ref", "ans", "ctx")
     assert not bad.correct and "invalid" in bad.reason
 
@@ -121,3 +121,17 @@ def test_usage_costs():
     u = Usage()
     u.add("gpt-5.4-mini", 1_000_000, 100_000, 1.0)
     assert u.cost_usd == pytest.approx(0.75 + 0.45)
+
+
+def test_judge_checks_are_isolated():
+    """Correctness never sees the excerpts; faithfulness never sees the reference."""
+    seen = []
+
+    class Spy:
+        def complete(self, system, user, json_mode=False):
+            seen.append(user)
+            return '{"correct": true, "faithful": true}'
+    judge(Spy(), "Q?", "REFERENCE-TEXT", "ANSWER", "EXCERPT-TEXT")
+    correctness, faithfulness = seen
+    assert "REFERENCE-TEXT" in correctness and "EXCERPT-TEXT" not in correctness
+    assert "EXCERPT-TEXT" in faithfulness and "REFERENCE-TEXT" not in faithfulness

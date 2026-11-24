@@ -46,7 +46,7 @@ def eval_end_to_end(retriever, llm, judge_llm, questions: list[dict], k: int, ge
         secs = time.perf_counter() - t0
         row = {"id": q["id"], "answerable": q["answerable"], "answer": a.text, "abstained": a.abstained,
                "seconds": round(secs, 2), "cost_usd": round(gen_usage.cost_usd - before, 6),
-               "cited_pages": [c.page for c in a.cited]}
+               "cited_pages": [c.page for c in a.cited], "context_ids": [c.id for c in hits]}
         if q["answerable"]:
             row["citation_hit"] = any(c.page in q["gold_pages"] for c in a.cited)
             if a.abstained:
@@ -56,10 +56,15 @@ def eval_end_to_end(retriever, llm, judge_llm, questions: list[dict], k: int, ge
                 row.update(correct=v.correct, faithful=v.faithful, reason=v.reason)
         rows.append(row)
 
+    summary = summarize(rows)
+    return summary, rows
+
+
+def summarize(rows: list[dict]) -> dict:
     ans = [r for r in rows if r["answerable"]]
     unans = [r for r in rows if not r["answerable"]]
     pct = lambda xs: round(100 * sum(xs) / len(xs), 1) if xs else 0.0  # noqa: E731
-    summary = {
+    return {
         "correct_pct": pct([r["correct"] for r in ans]),
         "faithful_pct": pct([r["faithful"] for r in ans]),
         "citation_hit_pct": pct([r["citation_hit"] for r in ans]),
@@ -68,7 +73,31 @@ def eval_end_to_end(retriever, llm, judge_llm, questions: list[dict], k: int, ge
         "p50_seconds": round(statistics.median(r["seconds"] for r in rows), 2),
         "cost_per_1k_questions_usd": round(1000 * sum(r["cost_usd"] for r in rows) / len(rows), 3),
     }
-    return summary, rows
+
+
+def rejudge(judge_llm, usage: Usage) -> list[dict]:
+    """Re-score saved answers with the current judge, without regenerating them.
+
+    Retrieval is deterministic (BM25, cached embeddings), so the same excerpts are rebuilt.
+    """
+    questions = {q["id"]: q for q in load_questions()}
+    table = []
+    for path in sorted((RESULTS / "runs").glob("*.jsonl")):
+        kind, chunking, k, model = path.stem.split("_", 3)
+        retriever = make_retriever(kind, chunking, usage)
+        rows = [json.loads(x) for x in path.read_text(encoding="utf-8").splitlines() if x.strip()]
+        for r in rows:
+            q = questions[r["id"]]
+            if not q["answerable"] or r["abstained"]:
+                continue
+            hits = [c for c, _ in retriever.search(q["question"], int(k[1:]))]
+            r["context_ids"] = [c.id for c in hits]
+            v = judge(judge_llm, q["question"], q["reference"], r["answer"], format_context(hits))
+            r.update(correct=v.correct, faithful=v.faithful, reason=v.reason)
+        path.write_text("\n".join(json.dumps(x, ensure_ascii=False) for x in rows) + "\n", encoding="utf-8")
+        table.append({"retriever": kind, "chunking": chunking, "k": int(k[1:]), "model": model, **summarize(rows)})
+        print("re-judged", path.name)
+    return table
 
 
 def _write_table(path: Path, rows: list[dict]) -> None:
@@ -95,6 +124,8 @@ def main() -> None:
     e.add_argument("--k", nargs="+", type=int, default=[5])
     e.add_argument("--model", nargs="+", default=["gpt-5.4-mini"])
     e.add_argument("--judge", default="gpt-5.4-mini")
+    rj = sub.add_parser("rejudge", help="re-score saved runs with the current judge")
+    rj.add_argument("--judge", default="gpt-5.4-mini")
     a = p.parse_args()
     RESULTS.mkdir(exist_ok=True)
     questions = load_questions()
@@ -115,6 +146,10 @@ def main() -> None:
         raise SystemExit("Set OPENAI_API_KEY (see .env.example) to run the end-to-end evaluation.")
     judge_usage = Usage()
     judge_llm = OpenAIChat(a.judge, judge_usage)
+    if a.cmd == "rejudge":
+        _write_table(RESULTS / "end_to_end.csv", rejudge(judge_llm, usage))
+        print(f"judge cost: ${judge_usage.cost_usd:.3f}")
+        return
     rows = []
     (RESULTS / "runs").mkdir(exist_ok=True)
     for kind in a.retriever:

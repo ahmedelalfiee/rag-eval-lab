@@ -1,0 +1,7 @@
+retriever,chunking,k,model,correct_pct,faithful_pct,citation_hit_pct,false_abstain_pct,abstain_unanswerable_pct,p50_seconds,cost_per_1k_questions_usd
+bm25,section,5,gpt-5.4-mini,80.8,88.5,84.6,11.5,100.0,1.21,1.031
+bm25,section,5,gpt-5.4-nano,84.6,90.4,86.5,5.8,100.0,1.29,0.292
+dense,section,5,gpt-5.4-mini,92.3,94.2,94.2,3.8,100.0,1.19,0.947
+dense,section,5,gpt-5.4-nano,92.3,90.4,96.2,1.9,100.0,1.35,0.281
+hybrid,section,5,gpt-5.4-mini,92.3,94.2,92.3,3.8,100.0,1.2,0.995
+hybrid,section,5,gpt-5.4-nano,92.3,92.3,92.3,1.9,100.0,1.38,0.292

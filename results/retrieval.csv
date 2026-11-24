@@ -1,3 +1,7 @@
 retriever,chunking,n,recall@1,recall@3,recall@5,recall@10,mrr
 bm25,section,52,0.75,0.808,0.885,0.962,0.807
 bm25,fixed,52,0.75,0.846,0.865,0.942,0.815
+dense,section,52,0.769,0.942,0.962,0.981,0.861
+dense,fixed,52,0.788,0.904,0.923,0.942,0.85
+hybrid,section,52,0.769,0.962,0.962,1.0,0.865
+hybrid,fixed,52,0.827,0.923,0.962,0.981,0.883
