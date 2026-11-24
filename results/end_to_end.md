@@ -1,0 +1,8 @@
+| retriever | chunking | k | model | correct_pct | faithful_pct | citation_hit_pct | false_abstain_pct | abstain_unanswerable_pct | p50_seconds | cost_per_1k_questions_usd |
+|---|---|---|---|---|---|---|---|---|---|---|
+| bm25 | section | 5 | gpt-5.4-mini | 84.6 | 96.2 | 84.6 | 11.5 | 100.0 | 1.21 | 1.031 |
+| bm25 | section | 5 | gpt-5.4-nano | 84.6 | 92.3 | 86.5 | 5.8 | 100.0 | 1.29 | 0.292 |
+| dense | section | 5 | gpt-5.4-mini | 94.2 | 96.2 | 94.2 | 3.8 | 100.0 | 1.19 | 0.947 |
+| dense | section | 5 | gpt-5.4-nano | 94.2 | 96.2 | 96.2 | 1.9 | 100.0 | 1.35 | 0.281 |
+| hybrid | section | 5 | gpt-5.4-mini | 88.5 | 98.1 | 92.3 | 3.8 | 100.0 | 1.2 | 0.995 |
+| hybrid | section | 5 | gpt-5.4-nano | 90.4 | 94.2 | 92.3 | 1.9 | 100.0 | 1.38 | 0.292 |
