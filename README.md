@@ -67,7 +67,7 @@ marked "unsupported" although they are in the FastAPI docs.
 **Fix:** two isolated checks. Correctness sees only the question, reference and answer;
 faithfulness sees only the excerpts and the answer, and a unit test enforces that neither leaks
 into the other. A `rejudge` command re-scored the saved answers without regenerating them.
-Flags dropped from **26 to 14**, and faithfulness rose by 2–10 points per configuration. The v1
+Flags dropped from **26 to 14**, and faithfulness rose by 2–8 points per configuration. The v1
 results are kept in `results/judge_v1/` for comparison.
 
 ## How it works
